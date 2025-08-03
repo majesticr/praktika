@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Практика</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #03050e 0%, #3c3b3d 100%);
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .sidebar {
+            width: 350px;
+            background: #2d2d2d;
+            border-left: 1px solid #444;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.3);
+        }
+
+        .drone-panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .drone-card {
+            background: #3a3a3a;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            cursor: pointer;
+        }
+
+        .drone-card:hover {
+            transform: translateX(-5px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .drone-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .drone-icon {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes drone-pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .drone-name {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .drone-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .info-item {
+            background: #4a4a4a;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .info-label {
+            color: #aaa;
+            font-size: 10px;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .drone-status {
+            background: #4a4a4a;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .logs-panel {
+            height: 300px;
+            border-top: 1px solid #444;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logs-header {
+            background: #3a3a3a;
+            padding: 15px;
+            font-weight: bold;
+            border-bottom: 1px solid #444;
+        }
+
+        .logs-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .log-entry {
+            background: #2a2a2a;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-left: 3px solid #667eea;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .log-time {
+            color: #888;
+            font-size: 10px;
+        }
+
+        .log-drone {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .connection-status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff4444;
+        }
+
+        .status-indicator.connected {
+            background: #44ff44;
+            animation: pulse 1s infinite;
+        }
+        .leaflet-popup-content-wrapper {
+            background: #2d2d2d;
+            color: white;
+            border-radius: 8px;
+        }
+
+        .leaflet-popup-content {
+            margin: 8px 12px;
+            font-size: 12px;
+        }
+
+        .leaflet-popup-tip {
+            background: #2d2d2d;
+        }
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: 40vh;
+                border-left: none;
+                border-top: 1px solid #444;
+            }
+            
+            .drone-panel {
+                padding: 15px;
+            }
+            
+            .logs-panel {
+                height: 200px;
+            }
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #764ba2;
+        }
+    </style>
+
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <div class="header">
+                <h1>Система контроля полета</h1>
+            </div>
+            <div class="map-container">
+                <div id="map"></div>
+                <div class="connection-status">
+                    <div class="status-indicator" id="statusIndicator"></div>
+                    <span id="statusText">Подключение...</span>
+                </div>
+            </div>
+        </div>
+        <div class="sidebar">
+            <div class="drone-panel" id="dronePanel"></div>
+            <div class="logs-panel">
+                <div class="logs-header">Логи передвижений</div>
+                <div class="logs-content" id="logsContent"></div>
+            </div>
+        </div>
+    </div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        
+class DroneTracker {
+    constructor() {
+        this.map = null;
+        this.ws = null;
+        this.drones = {};
+        this.zones = {};
+        this.droneMarkers = {};
+        this.dronePaths = {};
+        this.dronePolylines = {};
+        this.zonePolygons = {};
+        this.zoneLabels = {};
+        this.corridorPolygons = {};
+        this.init();
+    }
+
+    init() {
+        this.initMap();
+        this.connectWebSocket();
+    }
+
+    initMap() {
+        this.map = L.map('map', {
+            center: [53.200, 50.110], 
+            zoom: 14,
+            zoomControl: false
+        });
+        L.control.zoom({ position: 'bottomright' }).addTo(this.map);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: 'Raikov A.V.',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(this.map);
+    }
+
+    connectWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        try {
+            this.ws = new WebSocket(wsUrl);
+            this.ws.onopen = () => this.updateConnectionStatus(true);
+            this.ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                this.handleMessage(data);
+            };
+            this.ws.onclose = () => {
+                this.updateConnectionStatus(false);
+                setTimeout(() => this.connectWebSocket(), 3000);
+            };
+            this.ws.onerror = () => this.updateConnectionStatus(false);
+        } catch {
+            this.updateConnectionStatus(false);
+            setTimeout(() => this.updateConnectionStatus(true), 1000);
+        }
+    }
+
+    updateConnectionStatus(connected) {
+        const indicator = document.getElementById('statusIndicator');
+        const text = document.getElementById('statusText');
+        if (connected) {
+            indicator.classList.add('connected');
+            text.textContent = 'Подключено';
+        } else {
+            indicator.classList.remove('connected');
+            text.textContent = 'Отключено';
+        }
+    }
+
+    handleMessage(data) {
+        switch (data.type) {
+            case 'update':
+                this.updateDrones(data.drones);
+                this.updateZones(data.zones, data.drones);
+                this.updateDronePanel();
+                break;
+            case 'log':
+                this.addLogEntry(data.data);
+                break;
+        }
+    }
+
+    updateZones(zones, drones) {
+        this.zones = zones;
+        Object.values(this.zonePolygons).forEach(polygons => polygons.forEach(p => this.map.removeLayer(p)));
+        Object.values(this.zoneLabels).forEach(label => this.map.removeLayer(label));
+        Object.values(this.corridorPolygons).forEach(arr => arr.forEach(p => this.map.removeLayer(p)));
+        this.zonePolygons = {};
+        this.zoneLabels = {};
+        this.corridorPolygons = {};
+
+        Object.entries(zones).forEach(([zoneName, zone]) => {
+            this.zonePolygons[zoneName] = [];
+            // Buffer область
+            const bufferPolygon = L.polygon(
+                zone.buffer.area.map(p => [p.y, p.x]),
+                {
+                    color: '#ffff00',
+                    weight: 2,
+                    opacity: 0.6,
+                    fillColor: '#ffff00',
+                    fillOpacity: 0.05
+                }
+            ).addTo(this.map);
+            bufferPolygon.bindPopup(`<strong>${zoneName} - Buffer</strong><br>Высота: ${zone.buffer.altitude}м - ${zone.buffer.altitude + zone.buffer.height}м`);
+            this.zonePolygons[zoneName].push(bufferPolygon);
+
+            // Main область
+            const mainPolygon = L.polygon(
+                zone.main.area.map(p => [p.y, p.x]),
+                {
+                    color: '#00ff00',
+                    weight: 2,
+                    opacity: 0.8,
+                    fillColor: '#00ff00',
+                    fillOpacity: 0.10
+                }
+            ).addTo(this.map);
+            mainPolygon.bindPopup(`<strong>${zoneName} - Main</strong><br>Высота: ${zone.main.altitude}м - ${zone.main.altitude + zone.main.height}м`);
+            this.zonePolygons[zoneName].push(mainPolygon);
+
+            // Подпись по центру для main-области
+            const center = this.getPolygonCenter(zone.main.area);
+            const label = L.marker(center, {
+                icon: L.divIcon({
+                    className: '',
+                    html: `<div style="color:#00ff00;font-weight:bold;font-size:16px;text-shadow:1px 1px 4px #000;">${zoneName}<br>Main область</div>`,
+                    iconSize: [120, 40],
+                    iconAnchor: [60, 20]
+                }),
+                interactive: false
+            }).addTo(this.map);
+            this.zoneLabels[zoneName] = label;
+        });
+
+        // Коридоры дронов
+        if (drones) {
+            Object.entries(drones).forEach(([droneName, drone]) => {
+                if (drone.corridor && drone.corridor.length > 0) {
+                    if (!this.corridorPolygons[droneName]) this.corridorPolygons[droneName] = [];
+                    
+                    // Изображаем коридор
+                    const corridorPolyline = L.polyline(
+                        drone.corridor.map(p => [p.y, p.x]),
+                        {
+                            color: drone.color,
+                            weight: 8,
+                            opacity: 0.7,
+                            dashArray: '10, 5'
+                        }
+                    ).addTo(this.map);
+                    
+                    corridorPolyline.bindPopup(`<strong>Безопасный коридор дрона ${drone.name}</strong><br>Маршрут полета`);
+                    this.corridorPolygons[droneName].push(corridorPolyline);
+
+                    // Буферная зона вокруг коридора
+                    const bufferZone = L.polyline(
+                        drone.corridor.map(p => [p.y, p.x]),
+                        {
+                            color: drone.color,
+                            weight: 20,
+                            opacity: 0.15,
+                            interactive: false
+                        }
+                    ).addTo(this.map);
+                    
+                    this.corridorPolygons[droneName].push(bufferZone);
+
+                    // Маркер начала и конца коридора
+                    if (drone.corridor.length > 0) {
+                        const startMarker = L.circleMarker([drone.corridor[0].y, drone.corridor[0].x], {
+                            color: drone.color,
+                            fillColor: drone.color,
+                            fillOpacity: 0.8,
+                            radius: 6
+                        }).addTo(this.map);
+                        startMarker.bindPopup(`Начало коридора ${drone.name}`);
+                        this.corridorPolygons[droneName].push(startMarker);
+
+                        const endIdx = drone.corridor.length - 1;
+                        const endMarker = L.circleMarker([drone.corridor[endIdx].y, drone.corridor[endIdx].x], {
+                            color: drone.color,
+                            fillColor: 'white',
+                            fillOpacity: 0.8,
+                            radius: 6,
+                            weight: 2
+                        }).addTo(this.map);
+                        endMarker.bindPopup(`Конец коридора ${drone.name}`);
+                        this.corridorPolygons[droneName].push(endMarker);
+                    }
+                }
+            });
+        }
+    }
+
+    getPolygonCenter(area) {
+        let sumX = 0, sumY = 0;
+        area.forEach(p => { sumX += p.x; sumY += p.y; });
+        return [sumY / area.length, sumX / area.length];
+    }
+
+ updateDrones(drones) {
+    this.drones = drones;
+    Object.entries(drones).forEach(([droneName, drone]) => {
+        // Пройденный маршрут
+        if (!this.dronePaths[droneName]) this.dronePaths[droneName] = [];
+        this.dronePaths[droneName].push([drone.position.y, drone.position.x]);
+        if (this.dronePaths[droneName].length > 20) this.dronePaths[droneName].shift();
+        
+        // Изображаем линию маршрута
+        if (this.dronePolylines[droneName]) {
+            this.map.removeLayer(this.dronePolylines[droneName]);
+        }
+        this.dronePolylines[droneName] = L.polyline(this.dronePaths[droneName], {
+            color: drone.color,
+            weight: 3,
+            opacity: 0.8
+        }).addTo(this.map);
+        
+        // Проверяем, находится ли дрон в коридоре
+        const isInCorridor = this.isDroneInCorridor(drone);
+        const statusText = isInCorridor ? 'В коридоре' : 'Вне коридора';
+        const statusColor = isInCorridor ? '#4CAF50' : '#FF9800';
+
+        // Маркеры для дронов
+        if (this.droneMarkers[droneName]) {
+            this.droneMarkers[droneName].setLatLng([drone.position.y, drone.position.x]);
+        } else {
+            const droneIcon = L.divIcon({
+                className: 'drone-marker',
+                html: `<div style="width:24px;height:24px;background:${drone.color};border:3px solid white;border-radius:50%;box-shadow:0 3px 15px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;color:white;animation:drone-pulse 3s infinite;">𖣘</div>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+            const marker = L.marker([drone.position.y, drone.position.x], { icon: droneIcon }).addTo(this.map);
+            marker.bindPopup(`
+                <strong>${drone.name}</strong><br>
+                Координаты: ${drone.position.x.toFixed(6)}, ${drone.position.y.toFixed(6)}<br>
+                Высота: ${drone.altitude.toFixed(1)}м<br>
+                Скорость: ${drone.speed.toFixed(1)} км/ч<br>
+                Направление: ${drone.heading.toFixed(0)}°<br>
+                Статус: ${statusText}
+            `);
+            this.droneMarkers[droneName] = marker;
+        }
+        
+        // Обновляем содержимое для параметров
+        this.droneMarkers[droneName].getPopup().setContent(`
+            <strong>${drone.name}</strong><br>
+            Координаты: ${drone.position.x.toFixed(6)}, ${drone.position.y.toFixed(6)}<br>
+            Высота: ${drone.altitude.toFixed(1)}м<br>
+            Скорость: ${drone.speed.toFixed(1)} км/ч<br>
+            Направление: ${drone.heading.toFixed(0)}°<br>
+            Статус: ${statusText}
+        `);
+
+        // Добавляем векторную стрелку направления
+        const headingRad = drone.heading * Math.PI / 180;
+        const arrowLength = 0.0005;
+        const arrowEnd = [
+            drone.position.y + Math.sin(headingRad) * arrowLength,
+            drone.position.x + Math.cos(headingRad) * arrowLength
+        ];
+        
+        if (this.droneMarkers[droneName + '_arrow']) {
+            this.map.removeLayer(this.droneMarkers[droneName + '_arrow']);
+        }
+        
+        this.droneMarkers[droneName + '_arrow'] = L.polyline([ 
+            [drone.position.y, drone.position.x], 
+            arrowEnd 
+        ], {
+            color: drone.color,
+            weight: 3,
+            opacity: 0.8
+        }).addTo(this.map);
+    });
+}
+
+
+    updateDronePanel() {
+        const panel = document.getElementById('dronePanel');
+        panel.innerHTML = '';
+        Object.entries(this.drones).forEach(([droneName, drone]) => {
+            const droneCard = document.createElement('div');
+            droneCard.className = 'drone-card';
+            droneCard.style.borderLeftColor = drone.color;
+            
+            const isInCorridor = this.isDroneInCorridor(drone);
+            const statusText = isInCorridor ? 'В коридоре' : 'Вне коридора';
+            const statusColor = isInCorridor ? '#4CAF50' : '#FF9800';
+            
+            droneCard.innerHTML = `
+                <div class="drone-header">
+                    <div class="drone-icon" style="background-color: ${drone.color}"></div>
+                    <div class="drone-name">${drone.name}</div>
+                </div>
+                <div class="drone-info">
+                    <div class="info-item"><div class="info-label">Широта</div><div>${drone.position.y.toFixed(6)}</div></div>
+                    <div class="info-item"><div class="info-label">Долгота</div><div>${drone.position.x.toFixed(6)}</div></div>
+                    <div class="info-item"><div class="info-label">Высота</div><div>${drone.altitude.toFixed(1)}м</div></div>
+                    <div class="info-item"><div class="info-label">Скорость</div><div>${drone.speed.toFixed(1)} км/ч</div></div>
+                    <div class="info-item"><div class="info-label">Направление</div><div>${drone.heading.toFixed(0)}°</div></div>
+                    <div class="info-item"><div class="info-label">Статус</div><div style="color: ${statusColor}">${statusText}</div></div>
+                </div>
+                <div class="drone-status">Последнее обновление: ${new Date().toLocaleTimeString()}</div>
+            `;
+            droneCard.addEventListener('click', () => {
+                this.map.setView([drone.position.y, drone.position.x], 16);
+                if (this.droneMarkers[droneName]) this.droneMarkers[droneName].openPopup();
+            });
+            panel.appendChild(droneCard);
+        });
+    }
+
+    isDroneInCorridor(drone) {
+        if (!drone.corridor || drone.corridor.length === 0) return false;
+        
+        // Проверяем, находится ли дрон близко к любой точке коридора
+        const threshold = 0.001; // Порог близости
+        return drone.corridor.some(point => {
+            const distance = Math.sqrt(
+                Math.pow(drone.position.x - point.x, 2) + 
+                Math.pow(drone.position.y - point.y, 2)
+            );
+            return distance < threshold;
+        });
+    }
+
+    addLogEntry(logData) {
+        const logsContent = document.getElementById('logsContent');
+        const logEntry = document.createElement('div');
+        logEntry.className = 'log-entry';
+        const time = new Date(logData.timestamp || Date.now()).toLocaleTimeString();
+        logEntry.innerHTML = `<div class="log-time">${time}</div><div><span class="log-drone">${logData.drone_name}:</span> ${logData.message}</div>`;
+        logsContent.insertBefore(logEntry, logsContent.firstChild);
+        while (logsContent.children.length > 50) logsContent.removeChild(logsContent.lastChild);
+    }
+}
+document.addEventListener('DOMContentLoaded', () => { new DroneTracker(); });
+    </script>
+</body>
+</html>
